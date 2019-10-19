@@ -247,8 +247,6 @@ class Matrix:
     def model(self):
         return self._model
 
-    # Print
-
     def pr(self):
         if not self._entries:
             return
