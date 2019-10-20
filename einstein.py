@@ -341,7 +341,7 @@ def if_on_right_of(flag, index, entry, needle):
 # | Then |
 # +------+
 
-def then(fn, name=''):
+def then(fn, name):
     def clojure(flag):
         def apply(entries):
             change = False
