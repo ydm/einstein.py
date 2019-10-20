@@ -21,9 +21,9 @@ if not value BEER then impossible BMAST
 if not value GER then impossible PRINCE
 if not next to NOR then impossible BLUE
 if not value RED then impossible BRIT
-if not on right of GREEN then impossible WHITE
+if not on left of WHITE then impossible GREEN
 if not value RED then impossible BRIT
-if on left of WHITE then value GREEN
+if on right of GREEN then value WHITE
 if value RED then value BRIT
 if not value SWEDE then impossible DOG
 if value GREEN then value COFE
@@ -44,10 +44,10 @@ if value TEA then value DANE
 if value PRINCE then value GER
 if value SWEDE then value DOG
 
-Color                       : Nation                  : Drink                    : Cigar                      : Pet                    
-YELLOW                      : NOR                     : WATER                    : DUN                        : CAT                    
-BLUE                        : DANE                    : TEA                      : BLEND                      : HORSE                  
-RED                         : BRIT                    : MILK                     : PAL                        : BIRD                   
-GREEN                       : GER                     : COFE                     : PRINCE                     : FISH                   
-WHITE                       : SWEDE                   : BEER                     : BMAST                      : DOG                    
+Color  : Nation : Drink : Cigar  : Pet
+YELLOW : NOR    : WATER : DUN    : CAT
+BLUE   : DANE   : TEA   : BLEND  : HORSE
+RED    : BRIT   : MILK  : PAL    : BIRD
+GREEN  : GER    : COFE  : PRINCE : FISH
+WHITE  : SWEDE  : BEER  : BMAST  : DOG
 ```
