@@ -42,11 +42,11 @@ Solution:
 '''
 
 import enum
+import functools
 import itertools
 import operator
 import re
 import sys
-from functools import reduce
 
 
 # +---------+
@@ -74,7 +74,7 @@ class Entry:
 
     def __init__(self, model):
         def full(cls):
-            return reduce(operator.or_, cls, cls(0))
+            return functools.reduce(operator.or_, cls, cls(0))
         self._flags = [full(cls) for cls in model]
         self.width = [len(s) for s in map(e2s, self._flags)]
 
@@ -262,6 +262,7 @@ class Matrix:
 
 def cond(initial=False, flip=None, needle=False):
     def wrapper(fn):
+        @functools.wraps(fn)
         def clojure(data):
             def test(matrix):
                 # Each condition returns an array of bools indicating
