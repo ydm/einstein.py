@@ -282,8 +282,8 @@ def cond(initial=False, flip=None, needle=False):
                         ary[j] = not initial
                 return ary
             # The name of the resulting test function is made out of
-            # the original function name and the data held in the
-            # clojure.  The data may be a flag, which provides a .name
+            # the original function name and the data held in clojure.
+            # `data' may optionally be a flag, which has a .name attr.
             test.__name__ = '{} {}'.format(
                 fn.__name__.replace('_', ' '),
                 getattr(data, 'name', data)
