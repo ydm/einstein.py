@@ -309,13 +309,13 @@ def if_not_value(flag, index, entry, *arsg):
 
 
 @cond(flipped=-1)
-def if_not_on_left(flag, index, entry, *args):
+def if_not_on_left_of(flag, index, entry, *args):
     if not entry.isset(flag):
         return (index - 1,)
 
 
 @cond(flipped=0)
-def if_not_on_right(flag, index, entry, *args):
+def if_not_on_right_of(flag, index, entry, *args):
     if not entry.isset(flag):
         return (index + 1,)
 
@@ -327,12 +327,12 @@ def if_not_next_to(flag, index, entry, *args):
 
 
 @cond(needle=True)
-def if_on_left(flag, index, entry, needle):
+def if_on_left_of(flag, index, entry, needle):
     return (index,) if (index == needle - 1) else None
 
 
 @cond(needle=True)
-def if_on_right(flag, index, entry, needle):
+def if_on_right_of(flag, index, entry, needle):
     return (index,) if (needle >= 0 and index == needle + 1) else None
 
 
@@ -401,10 +401,10 @@ class RuleBook:
         elif cond == 'index' and then == 'value':
             self._make(if_index, int(a), then_value, b)
         elif cond == 'on left of' and then == 'value':
-            self._make(if_on_left, a, then_value, b)
-            self._make(if_on_right, b, then_value, a)
-            self._make(if_not_on_left, a, then_impossible, b)
-            self._make(if_not_on_right, b, then_impossible, a)
+            self._make(if_on_left_of, a, then_value, b)
+            self._make(if_on_right_of, b, then_value, a)
+            self._make(if_not_on_left_of, a, then_impossible, b)
+            self._make(if_not_on_right_of, b, then_impossible, a)
 
     @property
     def rules(self):
