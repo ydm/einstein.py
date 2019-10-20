@@ -229,6 +229,7 @@ class Matrix:
                 return index
         return -1
 
+    @property
     def length(self):
         return len(self._entries)
 
@@ -265,7 +266,7 @@ def cond(initial=False, flipped=None, needle=False):
             def test(matrix):
                 # Each condition returns an array of bools indicating
                 # whether the respective entry passed the test or not
-                ary = [initial] * matrix.length()
+                ary = [initial] * matrix.length
                 # Hard-coded index to flip
                 if flipped is not None:
                     ary[flipped] = not initial
