@@ -3,8 +3,7 @@
 '''
 https://udel.edu/~os/riddle.html
 
-The situation
-
+The situation:
     There are 5 houses in five different colors.
     In each house lives a person with a different nationality.
 
@@ -448,7 +447,7 @@ def main():
     book.rule('if next to BLUE then possible NOR')
     book.rule('if next to WATER then possible BLEND')
 
-    verbose = '-v' in sys.argv
+    verbose = '-v' in sys.argv or '--verbose' in sys.argv
 
     while 1:
         rule = book.apply(m)
