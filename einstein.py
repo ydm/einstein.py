@@ -259,72 +259,81 @@ class Matrix:
 # | Conditions |
 # +------------+
 
-def cond_ary(fn, name='', initial=False, flipped=None, needle=False):
-    def clojure(data):
-        def test(matrix):
-            ary = [initial] * matrix.length()
-            # Hard-coded index to flip
-            if flipped is not None:
-                ary[flipped] = not initial
-            # The aggregated function may need a needle
-            needle_ = matrix.find(data) if needle else None
-            # For each entry, call the aggregated function and flip
-            # any indices it returns
-            for index, entry in matrix.enum():
-                flip = fn(data, index, entry, needle_)
-                for j in filter(matrix.check, flip or ()):
-                    ary[j] = not initial
-            return ary
-        test.__name__ = 'if {} {}'.format(name, getattr(data, 'name', data))
-        return test
-    return clojure
+def cond(initial=False, flipped=None, needle=False):
+    def wrapper(fn):
+        def clojure(data):
+            def test(matrix):
+                # Each condition returns an array of bools indicating
+                # whether the respective entry passed the test or not
+                ary = [initial] * matrix.length()
+                # Hard-coded index to flip
+                if flipped is not None:
+                    ary[flipped] = not initial
+                # The aggregated function may also need a needle
+                needle_ = matrix.find(data) if needle else None
+                # For each entry, call the aggregated function and
+                # flip any indices it returns
+                for index, entry in matrix.enum():
+                    flip = fn(data, index, entry, needle_)
+                    # Flip indices returned
+                    for j in filter(matrix.check, flip or ()):
+                        ary[j] = not initial
+                return ary
+            # The name of the resulting test function is made out of
+            # the original function name and the data held in the
+            # clojure.  The data may be a flag, which provides a .name
+            test.__name__ = '{} {}'.format(
+                fn.__name__.replace('_', ' '),
+                getattr(data, 'name', data)
+            )
+            return test
+        return clojure
+    return wrapper
 
 
-def index(needle, index, entry, *args):
+@cond()
+def if_index(needle, index, entry, *args):
     return (index,) if needle == index else None
 
 
-def value(flag, index, entry, *args):
+@cond()
+def if_value(flag, index, entry, *args):
     return (index,) if entry.eq(flag) else None
 
 
-def not_value(flag, index, entry, *arsg):
+@cond()
+def if_not_value(flag, index, entry, *arsg):
     actual = entry.flag_by_type(type(flag))
     if singlebit(actual) and actual != flag:
         return (index,)
 
 
-if_index = cond_ary(index, 'index')
-if_value = cond_ary(value, 'value')
-if_not_value = cond_ary(not_value, 'not value')
-
-
-def not_on_left(flag, index, entry, *args):
+@cond(flipped=-1)
+def if_not_on_left(flag, index, entry, *args):
     if not entry.isset(flag):
         return (index - 1,)
 
-def not_on_right(flag, index, entry, *args):
+
+@cond(flipped=0)
+def if_not_on_right(flag, index, entry, *args):
     if not entry.isset(flag):
         return (index + 1,)
 
-def not_next_to(flag, index, entry, *args):
+
+@cond(initial=True)
+def if_not_next_to(flag, index, entry, *args):
     if entry.isset(flag):
         return (index - 1, index + 1)
 
 
-if_not_on_left = cond_ary(not_on_left, 'not on left of', flipped=-1)
-if_not_on_right = cond_ary(not_on_right, 'not on right of', flipped=0)
-if_not_next_to = cond_ary(not_next_to, 'not next to', initial=True)
-
-def on_left(flag, index, entry, needle):
+@cond(needle=True)
+def if_on_left(flag, index, entry, needle):
     return (index,) if (index == needle - 1) else None
 
-def on_right(flag, index, entry, needle):
+
+@cond(needle=True)
+def if_on_right(flag, index, entry, needle):
     return (index,) if (needle >= 0 and index == needle + 1) else None
-
-
-if_on_left = cond_ary(on_left, 'on left of', needle=True)
-if_on_right = cond_ary(on_right, 'on right of', needle=True)
 
 
 # +------+
