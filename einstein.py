@@ -366,18 +366,11 @@ then_impossible = then(Entry.unset, 'impossible')
 class RuleBook:
 
     def __init__(self, model):
-        self._rules = []
         self._flags = {}
         for m in model:
             for flag in m:
                 self._flags[flag.name] = flag
-
-    def _make(self, cond, a, then, b):
-        rule = Rule(cond(a), then(b))
-        self._rules.append(rule)
-
-    def rule(self, s):
-        p = re.compile(
+        self._pattern = re.compile(
             r'if '
             r'(?P<cond>index|next to|on left of|value) '
             r'(?P<a>\w+) '
@@ -385,7 +378,14 @@ class RuleBook:
             r'(?P<then>possible|value) '
             r'(?P<b>[A-Z]+)'
         )
-        match = p.match(s)
+        self._rules = []
+
+    def _make(self, cond, a, then, b):
+        rule = Rule(cond(a), then(b))
+        self._rules.append(rule)
+
+    def rule(self, s):
+        match = self._pattern.match(s)
         if not match:
             raise ValueError(s)
         cond = match['cond']
