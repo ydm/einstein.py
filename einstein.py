@@ -260,7 +260,7 @@ class Matrix:
 # | Conditions |
 # +------------+
 
-def cond(initial=False, flipped=None, needle=False):
+def cond(initial=False, flip=None, needle=False):
     def wrapper(fn):
         def clojure(data):
             def test(matrix):
@@ -268,16 +268,16 @@ def cond(initial=False, flipped=None, needle=False):
                 # whether the respective entry passed the test or not
                 ary = [initial] * matrix.length
                 # Hard-coded index to flip
-                if flipped is not None:
-                    ary[flipped] = not initial
+                if flip is not None:
+                    ary[flip] = not initial
                 # The aggregated function may also need a needle
                 needle_ = matrix.find(data) if needle else None
                 # For each entry, call the aggregated function and
                 # flip any indices it returns
                 for index, entry in matrix.enum():
-                    flip = fn(data, index, entry, needle_)
+                    res = fn(data, index, entry, needle_)
                     # Flip indices returned
-                    for j in filter(matrix.check, flip or ()):
+                    for j in filter(matrix.check, res or ()):
                         ary[j] = not initial
                 return ary
             # The name of the resulting test function is made out of
@@ -293,8 +293,8 @@ def cond(initial=False, flipped=None, needle=False):
 
 
 @cond()
-def if_index(needle, index, entry, *args):
-    return (index,) if needle == index else None
+def if_index(searched, index, entry, *args):
+    return (index,) if searched == index else None
 
 
 @cond()
@@ -309,13 +309,13 @@ def if_not_value(flag, index, entry, *arsg):
         return (index,)
 
 
-@cond(flipped=-1)
+@cond(flip=-1)
 def if_not_on_left_of(flag, index, entry, *args):
     if not entry.isset(flag):
         return (index - 1,)
 
 
-@cond(flipped=0)
+@cond(flip=0)
 def if_not_on_right_of(flag, index, entry, *args):
     if not entry.isset(flag):
         return (index + 1,)
