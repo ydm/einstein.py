@@ -384,6 +384,11 @@ class RuleBook:
         rule = Rule(cond(a), then(b))
         self._rules.append(rule)
 
+    def apply(self, matrix):
+        for rule in self._rules:
+            if rule.apply(matrix):
+                return rule
+
     def rule(self, s):
         match = self._pattern.match(s)
         if not match:
@@ -446,15 +451,13 @@ def main():
     verbose = '-v' in sys.argv
 
     while 1:
-        for rule in book.rules:
-            if rule.apply(m):
-                print(rule)
-                if verbose:
-                    m.pr()
-                    print()
-                break
-        else:
+        rule = book.apply(m)
+        if not rule:
             break
+        print(rule)
+        if verbose:
+            m.pr()
+            print()
 
     if not verbose:
         print()
