@@ -90,23 +90,17 @@ class Entry:
             ', '.join(map(str, (x.value for x in self._flags)))
         )
 
-    def _index(self, flag):
-        '''
-        Return the index at which self._flags holds flags of the same
-        type.
-        '''
+    # Accessors
+
+    def _index_by_type(self, cls):
         for i, p in enumerate(self._flags):
-            if type(p) == type(flag):
+            if type(p) == cls:
                 return i
         raise ValueError
 
-    # Accessors
-
     def flag_by_type(self, cls):
-        for p in self._flags:
-            if type(p) == cls:
-                return p
-        raise ValueError
+        index = self._index_by_type(cls)
+        return self._flags[index]
 
     # Predicates
 
@@ -119,13 +113,13 @@ class Entry:
     # Manipulators
 
     def assign(self, flag):
-        i = self._index(flag)
+        i = self._index_by_type(type(flag))
         old = self._flags[i]
         self._flags[i] &= flag
         return self._flags[i] != old
 
     def unset(self, flag):
-        i = self._index(flag)
+        i = self._index_by_type(type(flag))
         old = self._flags[i]
         self._flags[i] &= ~flag
         return self._flags[i] != old
@@ -144,9 +138,7 @@ class Rule:
             entries = matrix.enum(results)
             change = self.then(entries)
             if change:
-                # matrix.norm() works also, but is generally not reliable
-                while matrix.norm():
-                    pass
+                matrix.norm()
                 return True
         return False
 
@@ -178,20 +170,20 @@ class Matrix:
 
     def norm(self):
         '''
-        First: if there is only one entry that may have a particular
-        value, then set that value.
+        First: if there is only one entry across the matrix that may
+        have a particular value, then set that value.
 
         XXX: This function has the nasty misfeature of setting anew
         single-bit values!
 
         Second: if there's a mask that has only one flag set, then
-        clear # that flag for all other entries.
+        clear that flag for all other entries.
         '''
         change = False
         # 1
         for cls in self._model:
             occs = {}           # occurrences
-            memo = {}           # keeps last entry with this flag
+            memo = {}           # keep last entry with this flag set
             for index, entry in self.enum():
                 for flag in cls:
                     if entry.isset(flag):
@@ -206,10 +198,10 @@ class Matrix:
         for index, entry in self.enum():
             for flag in entry._flags:
                 if singlebit(flag):
-                    change |= self.unset(flag, index)
+                    change |= self._unset(flag, exceptfor=index)
         return change
 
-    def unset(self, flag, exceptfor):
+    def _unset(self, flag, exceptfor):
         change = False
         for index, entry in self.enum():
             if index != exceptfor:
@@ -222,19 +214,15 @@ class Matrix:
         '''Check if index is valid'''
         return 0 <= index < len(self._entries)
 
-    def entries(self):
-        return self._entries
-
     def enum(self, xs=None):
         if xs:
-            return list(zip(itertools.count(), self._entries, xs))
+            return zip(itertools.count(), self._entries, xs)
         else:
-            return list(enumerate(self._entries))
+            return enumerate(self._entries)
 
     def find(self, flag):
         '''
-        Find the first index of an entry that has this flag singly
-        set.
+        Find the index of the entry that has this single-bit flag set.
         '''
         for index, entry in self.enum():
             if entry.eq(flag):
@@ -244,6 +232,7 @@ class Matrix:
     def length(self):
         return len(self._entries)
 
+    @property
     def model(self):
         return self._model
 
@@ -270,23 +259,60 @@ class Matrix:
 # | Conditions |
 # +------------+
 
-def cond(fn, name=''):
+def cond_ary(fn, name='', initial=False, flipped=None):
     def clojure(data):
         def test(matrix):
-            return [fn(data, index, entry)
-                    for (index, entry) in matrix.enum()]
+            ary = [initial] * matrix.length()
+            # hard-coded index to flip
+            if flipped is not None:
+                ary[flipped] = not initial
+            # For each entry, call the aggregated function and flip
+            # any indices it returns
+            for index, entry in matrix.enum():
+                flip = fn(data, index, entry)
+                for j in filter(matrix.check, flip or ()):
+                    ary[j] = not initial
+            return ary
         test.__name__ = 'if {} {}'.format(name, getattr(data, 'name', data))
         return test
     return clojure
 
 
-def cond_needle(fn, name=''):
-    def clojure(flag):
-        def test(matrix):
-            pass
-        test.__name__ = 'if {} {}'.format(name, flag.name)
-        return test
-    return clojure
+def index(needle, index, entry):
+    return (index,) if needle == index else None
+
+
+def value(flag, index, entry):
+    return (index,) if entry.eq(flag) else None
+
+
+def not_value(flag, index, entry):
+    actual = entry.flag_by_type(type(flag))
+    if singlebit(actual) and actual != flag:
+        return (index,)
+
+
+if_index = cond_ary(index, 'index')
+if_value = cond_ary(value, 'value')
+if_not_value = cond_ary(not_value, 'not value')
+
+
+def not_on_left(flag, index, entry):
+    if not entry.isset(flag):
+        return (index - 1,)
+
+def not_on_right(flag, index, entry):
+    if not entry.isset(flag):
+        return (index + 1,)
+
+def not_next_to(flag, index, entry):
+    if entry.isset(flag):
+        return (index - 1, index + 1)
+
+
+if_not_on_left = cond_ary(not_on_left, 'not on left of', flipped=-1)
+if_not_on_right = cond_ary(not_on_right, 'not on right of', flipped=0)
+if_not_next_to = cond_ary(not_next_to, 'not next to', initial=True)
 
 
 def cond2(fn, name=''):
@@ -296,19 +322,6 @@ def cond2(fn, name=''):
         test.__name__ = 'if {} {}'.format(name, flag.name)
         return test
     return clojure
-
-
-def index(needle, index, _):
-    return needle == index
-
-
-def value(flag, _, entry):
-    return entry.eq(flag)
-
-
-def not_value(flag, _, entry):
-    actual = entry.flag_by_type(type(flag))
-    return singlebit(actual) and actual != flag
 
 
 def on_left(flag, matrix):
@@ -327,51 +340,8 @@ def on_right(flag, matrix):
     return None
 
 
-def not_on_left(flag, matrix):
-    res = [False] * matrix.length()
-    for index, entry in matrix.enum():
-        if not entry.isset(flag):
-            left = index - 1
-            if matrix.check(left):
-                res[left] = True
-        # The last one can't be on the left of anything
-        res[-1] = True
-        return res
-
-
-def not_on_right(flag, matrix):
-    res = [False] * matrix.length()
-    for index, entry in matrix.enum():
-        if not entry.isset(flag):
-            right = index + 1
-            if matrix.check(right):
-                res[right] = True
-    # The first one can't be on the right of anything.
-    res[0] = True
-    return res
-
-
-def not_next_to(flag, matrix):
-    res = [True] * matrix.length()
-    for index, entry in matrix.enum():
-        if entry.isset(flag):
-            left = index - 1
-            if matrix.check(left):
-                res[left] = False
-            right = index + 1
-            if matrix.check(right):
-                res[right] = False
-    return res
-
-
-if_index = cond(index, 'index')
-if_value = cond(value, 'value')
-if_not_value = cond(not_value, 'not value')
 if_on_left = cond2(on_left, 'on left of')
 if_on_right = cond2(on_right, 'on right of')
-if_not_on_left = cond2(not_on_left, 'not on left of')
-if_not_on_right = cond2(not_on_right, 'not on right of')
-if_not_next_to = cond2(not_next_to, 'not next to')
 
 
 # +------+
@@ -444,6 +414,7 @@ class RuleBook:
             self._make(if_not_on_left, a, then_impossible, b)
             self._make(if_not_on_right, b, then_impossible, a)
 
+    @property
     def rules(self):
         return self._rules
 
@@ -461,7 +432,7 @@ def main():
     m.flag('Pet', 'DOG BIRD CAT HORSE FISH')
     m.alloc(5)                  # 5 men
 
-    book = RuleBook(m.model())
+    book = RuleBook(m.model)
     book.rule('if value BRIT then value RED')
     book.rule('if value SWEDE then value DOG')
     book.rule('if value DANE then value TEA')
@@ -481,7 +452,7 @@ def main():
     verbose = '-v' in sys.argv
 
     while 1:
-        for rule in book.rules():
+        for rule in book.rules:
             if rule.apply(m):
                 print(rule)
                 if verbose:
